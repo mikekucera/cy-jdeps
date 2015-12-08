@@ -3,6 +3,13 @@ import os
 from collections import defaultdict
 
 
+try:
+	java_home = os.environ['JAVA_HOME']
+except KeyError:
+	print "Error: JAVA_HOME environment variable not set"
+	sys.exit(1)
+
+
 def command_output(command):
 	import subprocess
 	p = subprocess.Popen(command, stdout=subprocess.PIPE)
@@ -14,24 +21,30 @@ def command_output(command):
 			break
 
 
-def jdeps_command(folder, jar):
-	try:
-		java_home = os.environ['JAVA_HOME']
-	except KeyError:
-		print "Error: JAVA_HOME environment variable not set"
-	return [java_home + "/bin/jdeps", folder + '/' + jar]
+def jdeps_command(folder, jar, class_level):
+	jdeps = java_home + "/bin/jdeps"
+	path = folder + '/' + jar
+	if class_level:
+		return [jdeps, "-verbose:class", path]
+	else:
+		return [jdeps, path]
 
 
 def get_and_validate_commandline_options():
 	import sys
+	class_level = False
+	p = 1
 	if len(sys.argv) < 3:
-		print "Usage:", sys.argv[0], "<package-name> <directory-containing-jars>"
+		print "Usage:", sys.argv[0], "[-c] <directory-containing-jars> <package-name>"
 		print "<package-name> must be in the format a.b.c"
 		sys.exit(1)
-	if not os.path.exists(sys.argv[1]):
-		print "Error:", sys.argv[1], "is not a valid path"
+	if sys.argv[1] == "-c":
+		class_level = True
+		p += 1
+	if not os.path.exists(sys.argv[p]):
+		print "Error:", sys.argv[p], "is not a valid path"
 		sys.exit(1)
-	return (sys.argv[2], sys.argv[1])
+	return (sys.argv[p], sys.argv[p+1], class_level)
 
 
 def get_files_in_dir(path):
@@ -42,10 +55,9 @@ def get_files_in_dir(path):
 
 
 def get_package_name(jdeps_output_line):
-	import re
-	match = re.match(r'\s*->\s(\S+).*', jdeps_output_line)
-	if match:
-		return match.group(1)
+	match = jdeps_output_line.split()
+	if len(match) >= 2:
+		return match[1]
 	else:
 		return None
 
@@ -63,12 +75,12 @@ def get_all_subpackages(package_name):
 
 # main
 
-search_package, jar_dir = get_and_validate_commandline_options()
+jar_dir, search_package, class_level = get_and_validate_commandline_options()
 jar_files = get_files_in_dir(jar_dir)
 index = defaultdict(set)
 
 for jar in jar_files:
-	jdeps = jdeps_command(jar_dir, jar)
+	jdeps = jdeps_command(jar_dir, jar, class_level)
 	for line in command_output(jdeps):
 		package_name = get_package_name(line)
 		for subpackage in get_all_subpackages(package_name):
