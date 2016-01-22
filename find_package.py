@@ -1,92 +1,53 @@
-# find_package.py
+import sys
+sys.path.insert(0, sys.path[0] + '/lib') #add lib folder to import paths
 import os
+import jdeps # from lib folder
 from collections import defaultdict
+import argparse
 
 
-try:
-	java_home = os.environ['JAVA_HOME']
-except KeyError:
-	print "Error: JAVA_HOME environment variable not set"
-	sys.exit(1)
+# Parse command line arguments
+parser = argparse.ArgumentParser(description='Find Cytoscape App Dependencies')
+parser.add_argument('-c', dest='class_level', action='store_true', help='find class level dependencies (default: package level)')
+parser.add_argument('-f', dest='filter_import', action='store_true', help='use Import-Package to filter dependencies')
+parser.add_argument('-s', dest='use_as_subpackage', action='store_true', help='find all packages for which search_package is a subpackage')
+parser.add_argument('-v', dest='verbose', action='store_true', help='print verbose debugging output to stdout')
+parser.add_argument('jar_dir', type=jdeps.readable_dir, help='directory containing jar files')
+parser.add_argument('search_package', help='package to find (must be in the format a.b.c)')
 
-
-def command_output(command):
-	import subprocess
-	p = subprocess.Popen(command, stdout=subprocess.PIPE)
-	while(True):
-		retcode = p.poll()
-		line = p.stdout.readline()
-		yield line
-		if(retcode is not None):
-			break
-
-
-def jdeps_command(folder, jar, class_level):
-	jdeps = java_home + "/bin/jdeps"
-	path = folder + '/' + jar
-	if class_level:
-		return [jdeps, "-verbose:class", path]
-	else:
-		return [jdeps, path]
-
-
-def get_and_validate_commandline_options():
-	import sys
-	class_level = False
-	p = 1
-	if len(sys.argv) < 3:
-		print "Usage:", sys.argv[0], "[-c] <directory-containing-jars> <package-name>"
-		print "<package-name> must be in the format a.b.c"
-		sys.exit(1)
-	if sys.argv[1] == "-c":
-		class_level = True
-		p += 1
-	if not os.path.exists(sys.argv[p]):
-		print "Error:", sys.argv[p], "is not a valid path"
-		sys.exit(1)
-	return (sys.argv[p], sys.argv[p+1], class_level)
-
-
-def get_files_in_dir(path):
-	from os import listdir
-	from os.path import isfile, join
-	files = [f for f in listdir(path) if isfile(join(path, f)) and f.endswith(".jar")]
-	return files
-
-
-def get_package_name(jdeps_output_line):
-	match = jdeps_output_line.split()
-	if len(match) >= 2:
-		return match[1]
-	else:
-		return None
-
-
-def get_all_subpackages(package_name):
-	if package_name is None:
-		return
-	subpackage = ''
-	for segment in package_name.split('.'):
-		if subpackage != '':
-			subpackage += '.'
-		subpackage += segment
-		yield subpackage
+args = parser.parse_args()
 
 
 # main
 
-jar_dir, search_package, class_level = get_and_validate_commandline_options()
-jar_files = get_files_in_dir(jar_dir)
+jar_files = jdeps.get_files_in_dir(args.jar_dir)
 index = defaultdict(set)
 
-for jar in jar_files:
-	jdeps = jdeps_command(jar_dir, jar, class_level)
-	for line in command_output(jdeps):
-		package_name = get_package_name(line)
-		for subpackage in get_all_subpackages(package_name):
-			if subpackage.startswith(search_package):
-				index[subpackage].add(jar)
+# perform search
+for jar in jar_files:	
+	jar_path = os.path.join(args.jar_dir, jar)
 
+	jdeps_imports = jdeps.run_jdeps(jar_path, args.class_level)
+	manifest_imports = jdeps.manifest_imports(jar_path) if args.filter_import else set()
+
+	if args.verbose:
+		print 'jar: ' + jar
+		print 'jdeps_imports: %s' % jdeps_imports
+		print 'manifest_imports: %s' % manifest_imports
+		print
+
+	for package_name in jdeps_imports:
+		if not args.filter_import or package_name in manifest_imports:
+			if args.use_as_subpackage:
+				for subpackage in jdeps.get_all_subpackages(package_name):
+					if subpackage.startswith(args.search_package):
+						index[subpackage].add(jar)
+			else:
+				if package_name == args.search_package:
+					index[package_name].add(jar)
+
+# print results
+print
 for key in sorted(index):
 	jars = list(index[key])
 	jars.sort()

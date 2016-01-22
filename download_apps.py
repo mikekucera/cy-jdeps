@@ -10,7 +10,7 @@ if len(sys.argv) < 2:
 
 download_dir = sys.argv[1]
 
-if not os.path.exists(download_dir):
+if not os.path.isdir(download_dir) or not os.access(download_dir, os.R_OK):
 	print "Error:", download_dir, "is not a valid path"
 	sys.exit(1)
 
