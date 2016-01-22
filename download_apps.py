@@ -20,7 +20,7 @@ app_store_url = 'http://apps.cytoscape.org/'
 response = json.load(urllib2.urlopen(app_store_url + 'backend/all_apps'))
 
 for app in response:
-	release = app['releases'][-1]
+	release = app['releases'][0]
 	version = release['version']
 	filename = download_dir + '/' + app['fullname'].replace(' ','_') + "-v" + version + ".jar"
 	downloadUrl = app_store_url + release['release_download_url']
