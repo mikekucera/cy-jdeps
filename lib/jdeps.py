@@ -82,3 +82,13 @@ def manifest_imports(jar_path):
 	imports = import_package.split(',')
 	imports = [imp[0:imp.find(';')] if imp.find(';') > 0 else imp for imp in imports]
 	return set(imports)
+
+def has_manifest_header(jar_path, header):
+	import jarfile
+	mf = jarfile.ReadManifest(jar_path)
+	return header in mf.main_section
+
+
+
+
+
