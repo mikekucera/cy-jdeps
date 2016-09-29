@@ -14,7 +14,7 @@ jar_files = jdeps.get_files_in_dir(args.jar_dir)
 for jar in jar_files:
 	jar_path = os.path.join(args.jar_dir, jar)
 
-	simple_app = jdeps.has_manifest_header(jar_path, 'Cytoscape-App')
+	simple_app = jdeps.has_manifest_header(jar_path, 'Cytoscape-App-Dependencies')
 	#simple_app = not jdeps.has_manifest_header(jar_path, 'Bundle-SymbolicName')
 
 	if simple_app:
