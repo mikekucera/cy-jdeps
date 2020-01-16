@@ -25,11 +25,13 @@ for app in response:
 	filename = download_dir + '/' + app['fullname'].replace(' ','_') + "-v" + version + ".jar"
 	downloadUrl = app_store_url + release['release_download_url']
 
-	print "Downloading", filename
-	fileRequest = urllib2.urlopen(downloadUrl)
-	output = open(filename,'wb')
-	output.write(fileRequest.read())
-	output.close()
-
+	if(os.path.exists(filename)):
+		print "Skipping", filename
+	else:
+		print "Downloading", filename
+		fileRequest = urllib2.urlopen(downloadUrl)
+		output = open(filename,'wb')
+		output.write(fileRequest.read())
+		output.close()
 
 print "Done"
