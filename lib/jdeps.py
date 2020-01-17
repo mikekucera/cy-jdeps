@@ -51,7 +51,7 @@ def get_files_in_dir(path):
 def get_package_name(jdeps_output_line):
 	match = jdeps_output_line.split()
 	if len(match) >= 2:
-		return match[1]
+		return match[2]
 	else:
 		return None
 
