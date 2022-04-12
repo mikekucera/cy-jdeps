@@ -8,7 +8,7 @@ Uses python 2.7
     
 ### Search for package dependencies
 
-    python find_package.py /path/to/download/folder org.cytoscape.filter
+    python find_package.py -s /path/to/download/folder org.cytoscape.filter
 
 Output:
 
@@ -24,7 +24,7 @@ org.cytoscape.filter.model
 
 ### Search for class-level dependencies
 
-    python find_package.py -c /path/to/download/folder org.cytoscape.filter
+    python find_package.py -c -s /path/to/download/folder org.cytoscape.filter
 
 Output:
 
